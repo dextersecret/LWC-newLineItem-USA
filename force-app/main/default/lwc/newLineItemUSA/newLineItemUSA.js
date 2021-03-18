@@ -236,7 +236,7 @@ export default class NewLineItemUSA extends LightningElement {
 				console.log('prod: ', soqlProduct);
 				if (soqlProduct.Product2.Name === selectedProduct && soqlProduct.Pricebook2.Name === priceBook) {
 					//options: cc, cchydro, rest
-					if (productFamily == 'Concrete Canvas') {
+					if (productFamily == 'Concrete Canvas' || productFamily == 'Concrete Canvas USA') {
 						if (selectedProduct.includes('Hydro')) {
 							// apply 10% (CC Hydro)
 							return (soqlProduct.UnitPrice * 0.9).toFixed(2);
