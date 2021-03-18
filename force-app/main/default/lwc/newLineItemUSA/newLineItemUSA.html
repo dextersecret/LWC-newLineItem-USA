@@ -1,0 +1,107 @@
+<template>
+  <template if:true={spinner}>
+      <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+  </template>
+  <template if:true={showpage0}>
+      <lightning-card title="Quote Line Items" class="slds-clearfix">
+          <lightning-formatted-text value={subtotalText} class="slds-text-heading_large slds-float_right" slot="footer"></lightning-formatted-text>
+          <lightning-button label="Add New Product" onclick={startnewlineitem} icon-name="utility:new" slot="footer" variant="brand" class="slds-var-m-around_x-small"></lightning-button>
+          <!-- column-widths-mode ="auto" -->
+          <lightning-datatable
+              hide-checkbox-column
+              wrap-text-max-lines="3"
+              data={tableData}
+              columns={columns}
+              onsave={handleSave}
+              onrowaction={handleRowAction}
+              key-field="id">
+          </lightning-datatable>
+      </lightning-card>
+  </template>
+  
+      <template if:true={showpage1}>
+          <lightning-card title="New Line Item">
+              <div class="slds-var-m-around_medium">
+                  <lightning-combobox
+                  name="family"
+                  label="Product Family"
+                  value={selectedFamily}
+                  placeholder="Select Product Family"
+                  options={familyOptions}
+                  onchange={handleFamilyList} 
+                  ></lightning-combobox>
+              </div>
+              <div class="slds-var-m-around_medium" if:true={renderProductlist}>
+                  <lightning-combobox
+                  name="product"
+                  label="Product"
+                  value={selectedProduct}
+                  placeholder="Select Product Name"
+                  options={productOptions}
+                  onchange={handleProductList} 
+                  ></lightning-combobox>
+              </div>
+              <lightning-button label="Cancel" onclick={restart} slot="footer" icon-name="utility:close" class="slds-var-m-around_x-small"></lightning-button>
+              <lightning-button if:true={renderNext1Btn} data-name="gotopage2" onclick={switchscreen} label="Next" slot="footer" class="slds-var-m-around_x-small"></lightning-button>
+          </lightning-card>
+      </template>
+  
+      <template if:true={showpage2}>
+          <lightning-card title="New Line Item">
+              <div class="slds-var-m-around_medium">
+                  <lightning-breadcrumbs>
+                      <lightning-breadcrumb label={selectedProduct}></lightning-breadcrumb>
+                  </lightning-breadcrumbs>
+              </div>
+              <div class="slds-var-m-around_medium">
+                  <div class="slds-grid">
+                      <div class="slds-col slds-size_1-of-2">    
+                          <lightning-record-edit-form object-api-name="QuoteLineItem">
+                              <lightning-input-field field-name={quantityField} value={productQty} onchange={changeQty}></lightning-input-field>
+                          </lightning-record-edit-form>
+                      </div>
+                      <div class="slds-col slds-size_1-of-2">    
+                          <lightning-record-edit-form object-api-name="QuoteLineItem">
+                              <lightning-input-field field-name={descriptionField} value={productDescr} onchange={changeDescr}></lightning-input-field>
+                          </lightning-record-edit-form>
+                      </div>
+                  </div>
+              </div>
+              
+              <lightning-button label="Cancel" onclick={restart} slot="footer" icon-name="utility:close" class="slds-var-m-around_x-small"></lightning-button>
+              <lightning-button if:false={editMode} data-name="gotopage1" onclick={switchscreen} label="Back" slot="footer" icon-name="utility:back" class="slds-var-m-around_x-small"></lightning-button>
+              <lightning-button data-name="gotopage3" onclick={switchscreen} label="Next" slot="footer" class="slds-var-m-around_x-small"></lightning-button>
+          </lightning-card>
+      </template>
+      
+      <template if:true={showpage3}>
+          <lightning-card title="New Line Item">
+              <p slot="header">Price Book</p>
+              <div class="slds-var-m-around_large">
+                  <lightning-breadcrumbs>
+                      <lightning-breadcrumb label={selectedProduct}></lightning-breadcrumb>
+                      <lightning-breadcrumb label={productQty}></lightning-breadcrumb>
+                  </lightning-breadcrumbs>
+              </div>
+              <div class="slds-var-m-around_large">
+                  <div class="slds-grid">
+                      <div class="slds-col slds-size_1-of-3">                               
+                              <lightning-record-edit-form object-api-name="QuoteLineItem">
+                                  <lightning-input-field field-name={unitPriceField} value={salePrice} onchange={handlePriceOverride}></lightning-input-field>
+                              </lightning-record-edit-form>
+                      </div>
+                      <div class="slds-col slds-size_1-of-3">   
+                          <h3 class="slds-text-heading_medium slds-var-m-top_xx-large slds-align_absolute-center">Discount: {productDiscount}%</h3>
+                      </div>
+                      <div class="slds-col slds-size_1-of-3">   
+                          <h2 class="slds-text-heading_medium slds-var-m-top_xx-large slds-align_absolute-center">Total Price: ${formattedPrice}</h2>
+                      </div>
+                  </div>
+              </div>
+              <lightning-button label="Cancel" onclick={restart} slot="footer" icon-name="utility:close" class="slds-var-m-around_x-small"></lightning-button>
+              <lightning-button data-name="gotopage2" onclick={switchscreen} label="Back" slot="footer" icon-name="utility:back" class="slds-var-m-around_x-small"></lightning-button>
+              <lightning-button if:false={editMode} data-name="btn3" label="Insert" onclick={insertLineItem} slot="footer" class="slds-var-m-around_x-small"></lightning-button>
+              <lightning-button if:true={editMode} data-name="btn4" label="Save" onclick={updateLineItem} slot="footer" class="slds-var-m-around_x-small"></lightning-button>
+          </lightning-card>
+      </template>
+  </template>
