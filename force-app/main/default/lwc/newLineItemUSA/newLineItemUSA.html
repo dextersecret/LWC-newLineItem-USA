@@ -76,6 +76,9 @@
       
       <template if:true={showpage3}>
           <lightning-card title="New Line Item">
+            <lightning-button label="Price List: Direct" slot="actions" onclick={openUSADirectPriceList} class="slds-var-m-around_x-small"></lightning-button>
+            <lightning-button label="Price List: Partner" slot="actions" onclick={openUSAPartnerPriceList} class="slds-var-m-around_x-small"></lightning-button>
+            <lightning-button label="Price List: Price Floors" slot="actions" onclick={openUSAFloorsPriceList} class="slds-var-m-around_x-small"></lightning-button>
               <p slot="header">Price Book</p>
               <div class="slds-var-m-around_large">
                   <lightning-breadcrumbs>

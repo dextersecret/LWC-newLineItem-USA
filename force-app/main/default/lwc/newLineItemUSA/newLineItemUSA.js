@@ -244,8 +244,16 @@ export default class NewLineItemUSA extends LightningElement {
 							//Shelters do not get price floor discount
 							return soqlProduct.UnitPrice.toFixed(2);
 						} else {
-							// apply price floor (standard CC)
-							return (soqlProduct.UnitPrice * (1 - exportDiscount / 100)).toFixed(2);
+							// apply price floor (standard CC), Consider indivisual product exception
+							let applyDiscount = exportDiscount;
+							if (
+								soqlProduct.Product2.Max_Floor_Calculated_Discount__c > 0 &&
+								soqlProduct.Product2.Max_Floor_Calculated_Discount__c < exportDiscount
+							) {
+								applyDiscount = soqlProduct.Product2.Max_Floor_Calculated_Discount__c;
+							}
+
+							return (soqlProduct.UnitPrice * (1 - applyDiscount / 100)).toFixed(2);
 						}
 					} else {
 						// apply standard price (ancillaries)
@@ -342,14 +350,14 @@ export default class NewLineItemUSA extends LightningElement {
 		}
 	}
 
-	openUKPriceList() {
-		window.open(`https://${window.location.hostname}/resource/1576597923000/CC_Pricing_Image`, '_blank');
+	openUSADirectPriceList() {
+		window.open(`https://${window.location.hostname}/resource/1576597923000/USA_Pricing_Direct`, '_blank');
 	}
-	openExportPriceList() {
-		window.open(`https://${window.location.hostname}/resource/1576598100000/CCPricingImageExport`, '_blank');
+	openUSAPartnerPriceList() {
+		window.open(`https://${window.location.hostname}/resource/1576598100000/USA_Pricing_Partner`, '_blank');
 	}
-	openHydroPriceList() {
-		window.open(`https://${window.location.hostname}/resource/1576598372000/CCHPricing`, '_blank');
+	openUSAFloorsPriceList() {
+		window.open(`https://${window.location.hostname}/resource/1576598100000/USA_Pricing_Floors`, '_blank');
 	}
 
 	//===========DATATABLE WITH LINE ITEMS==========================
