@@ -67,6 +67,11 @@
                           </lightning-record-edit-form>
                       </div>
                   </div>
+                  <template if:true={showPackSizeBadge}>
+                    <lightning-badge label={badgedowntxt} class="slds-badge_inverse"></lightning-badge>
+                    <lightning-badge label="Beta"></lightning-badge>
+                    <lightning-badge label="Gamma"></lightning-badge>
+                  </template>
               </div>
               
               <lightning-button label="Cancel" onclick={restart} slot="footer" icon-name="utility:close" class="slds-var-m-around_x-small"></lightning-button>

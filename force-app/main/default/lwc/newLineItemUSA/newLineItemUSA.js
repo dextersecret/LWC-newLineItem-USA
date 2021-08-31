@@ -36,6 +36,7 @@ export default class NewLineItemUSA extends LightningElement {
 	renderNext1Btn = false;
 	selectedFamily = '';
 	selectedProduct = '';
+	selectedPrdctPckSize = 1;
 	productQty = 0;
 	productDescr = '';
 	salePrice = 0;
@@ -49,6 +50,12 @@ export default class NewLineItemUSA extends LightningElement {
 	editMode = false;
 	last = 'none';
 	spinner = false;
+	showPackSizeBadge = false;
+	badgemsg = { down: { packs: 0, qty: 0 }, up: { packs: 0, qty: 0 } };
+
+	get badgedowntxt() {
+		return `${this.badgemsg.down.packs}x (${this.badgemsg.down.packs})`;
+	}
 
 	@wire(MessageContext) messageContext;
 	// Encapsulate logic for Lightning message service subscribe and unsubsubscribe
@@ -158,6 +165,7 @@ export default class NewLineItemUSA extends LightningElement {
 		this.productList = [];
 		this.selectedFamily = '';
 		this.selectedProduct = '';
+		this.selectedPrdctPckSize = 1;
 		this.productQty = '';
 		this.productDescr = '';
 		this.salePrice = '';
@@ -165,6 +173,7 @@ export default class NewLineItemUSA extends LightningElement {
 		this.totalPrice = '';
 		this.refreshTbl();
 		this.editMode = false;
+		this.showPackSizeBadge = false;
 	}
 	refreshTbl() {
 		//makes sure that datatable gets refreshed after LineItem insert happens
@@ -196,13 +205,18 @@ export default class NewLineItemUSA extends LightningElement {
 				if ((this.productList.length < 1 || matchingFamily < 1) && !soqlProduct.Product2.Name.includes('~')) {
 					this.productList.push({
 						family: soqlProduct.Product2.Family,
-						products: [ { name: soqlProduct.Product2.Name } ]
+						products: [
+							{ name: soqlProduct.Product2.Name, packsize: soqlProduct.Product2.Pack_Size__c || 1 }
+						]
 					});
 				} else if (matchingFamily > 0) {
 					//if already has soql family - find index and push to products
 					for (const prod of this.productList) {
 						if (prod.family === soqlProduct.Product2.Family && !soqlProduct.Product2.Name.includes('~')) {
-							prod.products.push({ name: soqlProduct.Product2.Name });
+							prod.products.push({
+								name: soqlProduct.Product2.Name,
+								packsize: soqlProduct.Product2.Pack_Size__c || 1
+							});
 						}
 					}
 				}
@@ -241,6 +255,18 @@ export default class NewLineItemUSA extends LightningElement {
 	handleProductList(event) {
 		this.renderNext1Btn = true;
 		this.selectedProduct = event.detail.value;
+		if (this.selectedFamily.startsWith('Concrete Canvas')) {
+			for (const prod of this.productList) {
+				if (prod.family.startsWith('Concrete Canvas')) {
+					for (const product of prod.products) {
+						if (product.name === this.selectedProduct && product.packsize && product.packsize > 1) {
+							this.selectedPrdctPckSize = product.packsize;
+							this.showPackSizeBadge = true;
+						}
+					}
+				}
+			}
+		}
 	}
 	get familyOptions() {
 		return this.productFamilies;
