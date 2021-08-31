@@ -16,6 +16,9 @@ import LINEITEMID_FIELD from '@salesforce/schema/QuoteLineItem.Id';
 
 import { columns } from './dataTableColumns';
 
+import { subscribe, unsubscribe, APPLICATION_SCOPE, MessageContext } from 'lightning/messageService';
+import recordSelected from '@salesforce/messageChannel/Record_Selected__c';
+
 export default class NewLineItemUSA extends LightningElement {
 	unitPriceField = UNITPRICE_FIELD;
 	quantityField = QUANTITY_FIELD;
@@ -47,6 +50,40 @@ export default class NewLineItemUSA extends LightningElement {
 	last = 'none';
 	spinner = false;
 
+	@wire(MessageContext) messageContext;
+	// Encapsulate logic for Lightning message service subscribe and unsubsubscribe
+	subscribeToMessageChannel() {
+		// if (!this.subscription) {
+		this.subscription = subscribe(this.messageContext, recordSelected, (message) => this.handleMessage(message), {
+			scope: APPLICATION_SCOPE
+		});
+		// }
+	}
+	handleMessage(msgPrdct) {
+		// Lightning Message Service coming from ancillaryCalculator LWC
+		this.restart();
+		let msgProdFamily = msgPrdct.rowActnPrdct.family;
+		let msgProdName = msgPrdct.rowActnPrdct.name;
+		let passParam = { detail: { value: 0 } };
+		passParam.detail.value = msgProdFamily;
+		this.startnewlineitem();
+		this.selectedFamily = msgProdFamily;
+		this.productQty = msgPrdct.rowActnPrdct.quantity;
+		if (msgProdFamily.startsWith('Concrete Canvas')) {
+			this.selectedProduct = msgProdName;
+			this.showpage1 = false;
+			this.showpage2 = true;
+			this.showpage3 = false;
+		} else {
+			this.showpage1 = true;
+			this.showpage2 = false;
+			this.showpage3 = false;
+			this.handleFamilyList(passParam);
+		}
+	}
+	connectedCallback() {
+		this.subscribeToMessageChannel();
+	}
 	//~~~~~~~ Here, for code longevity It's better to Import Field API Names: FIELDNAME_FIELD
 	@wire(getRecord, {
 		recordId: '$recordId',

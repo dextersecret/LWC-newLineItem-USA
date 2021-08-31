@@ -50,6 +50,7 @@
           <lightning-card title="New Line Item">
               <div class="slds-var-m-around_medium">
                   <lightning-breadcrumbs>
+                      <lightning-breadcrumb label={selectedFamily}></lightning-breadcrumb>
                       <lightning-breadcrumb label={selectedProduct}></lightning-breadcrumb>
                   </lightning-breadcrumbs>
               </div>
@@ -82,6 +83,7 @@
               <p slot="header">Price Book</p>
               <div class="slds-var-m-around_large">
                   <lightning-breadcrumbs>
+                      <lightning-breadcrumb label={selectedFamily}></lightning-breadcrumb>
                       <lightning-breadcrumb label={selectedProduct}></lightning-breadcrumb>
                       <lightning-breadcrumb label={productQty}></lightning-breadcrumb>
                   </lightning-breadcrumbs>
