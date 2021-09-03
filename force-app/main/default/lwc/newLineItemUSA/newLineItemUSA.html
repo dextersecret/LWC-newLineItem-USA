@@ -35,7 +35,7 @@
                   <lightning-combobox
                   name="product"
                   label="Product"
-                  value={selectedProduct}
+                  value={selectedProductName}
                   placeholder="Select Product Name"
                   options={productOptions}
                   onchange={handleProductList} 
@@ -51,7 +51,7 @@
               <div class="slds-var-m-around_medium">
                   <lightning-breadcrumbs>
                       <lightning-breadcrumb label={selectedFamily}></lightning-breadcrumb>
-                      <lightning-breadcrumb label={selectedProduct}></lightning-breadcrumb>
+                      <lightning-breadcrumb label={selectedProductName}></lightning-breadcrumb>
                   </lightning-breadcrumbs>
               </div>
               <div class="slds-var-m-around_medium">
@@ -68,9 +68,9 @@
                       </div>
                   </div>
                   <template if:true={showPackSizeBadge}>
-                    <lightning-badge label={badgedowntxt} class="slds-badge_inverse"></lightning-badge>
-                    <lightning-badge label="Beta"></lightning-badge>
-                    <lightning-badge label="Gamma"></lightning-badge>
+                    <lightning-badge label={badgePackSztxt} class="slds-badge_inverse"></lightning-badge>
+                    <lightning-badge data-name={badgemsg} label={badgeDowntxt} onclick={handleBadgeDownClick}></lightning-badge>
+                    <lightning-badge data-name={badgemsg} label={badgeUptxt} onclick={handleBadgeUpClick}></lightning-badge>
                   </template>
               </div>
               
@@ -89,7 +89,7 @@
               <div class="slds-var-m-around_large">
                   <lightning-breadcrumbs>
                       <lightning-breadcrumb label={selectedFamily}></lightning-breadcrumb>
-                      <lightning-breadcrumb label={selectedProduct}></lightning-breadcrumb>
+                      <lightning-breadcrumb label={selectedProductName}></lightning-breadcrumb>
                       <lightning-breadcrumb label={productQty}></lightning-breadcrumb>
                   </lightning-breadcrumbs>
               </div>

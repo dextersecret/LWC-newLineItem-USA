@@ -18,6 +18,7 @@ import { columns } from './dataTableColumns';
 
 import { subscribe, unsubscribe, APPLICATION_SCOPE, MessageContext } from 'lightning/messageService';
 import recordSelected from '@salesforce/messageChannel/Record_Selected__c';
+import PermissionsSalesConsole from '@salesforce/schema/MutingPermissionSet.PermissionsSalesConsole';
 
 export default class NewLineItemUSA extends LightningElement {
 	unitPriceField = UNITPRICE_FIELD;
@@ -35,8 +36,8 @@ export default class NewLineItemUSA extends LightningElement {
 	renderProductlist = false;
 	renderNext1Btn = false;
 	selectedFamily = '';
-	selectedProduct = '';
-	selectedPrdctPckSize = 1;
+	selectedProductName = '';
+	selectedProductDtls = [];
 	productQty = 0;
 	productDescr = '';
 	salePrice = 0;
@@ -51,12 +52,19 @@ export default class NewLineItemUSA extends LightningElement {
 	last = 'none';
 	spinner = false;
 	showPackSizeBadge = false;
-	badgemsg = { down: { packs: 0, qty: 0 }, up: { packs: 0, qty: 0 } };
+	badgemsg = { down: { packs: 0, qty: 0 }, up: { packs: 0, qty: 0 }, pcksize: 0 };
 
-	get badgedowntxt() {
-		return `${this.badgemsg.down.packs}x (${this.badgemsg.down.packs})`;
+	get badgeDowntxt() {
+		return `${this.badgemsg.down.qty} (${this.badgemsg.down.packs}x)`;
+	}
+	get badgeUptxt() {
+		return `${this.badgemsg.up.qty} (${this.badgemsg.up.packs}x)`;
+	}
+	get badgePackSztxt() {
+		return `Pack Size: ${this.badgemsg.pcksize}`;
 	}
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	@wire(MessageContext) messageContext;
 	// Encapsulate logic for Lightning message service subscribe and unsubsubscribe
 	subscribeToMessageChannel() {
@@ -75,9 +83,12 @@ export default class NewLineItemUSA extends LightningElement {
 		passParam.detail.value = msgProdFamily;
 		this.startnewlineitem();
 		this.selectedFamily = msgProdFamily;
-		this.productQty = msgPrdct.rowActnPrdct.quantity;
+		// screws (Jointing) come in boxes of thousand, so need to exclude quantity
+		if (!msgProdFamily.startsWith('Joint')) {
+			this.productQty = msgPrdct.rowActnPrdct.quantity;
+		}
 		if (msgProdFamily.startsWith('Concrete Canvas')) {
-			this.selectedProduct = msgProdName;
+			this.selectedProductName = msgProdName;
 			this.showpage1 = false;
 			this.showpage2 = true;
 			this.showpage3 = false;
@@ -87,10 +98,14 @@ export default class NewLineItemUSA extends LightningElement {
 			this.showpage3 = false;
 			this.handleFamilyList(passParam);
 		}
+		this.assgnSelectedProdctDetails();
+		this.assignBadgeMsg();
 	}
 	connectedCallback() {
 		this.subscribeToMessageChannel();
 	}
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 	//~~~~~~~ Here, for code longevity It's better to Import Field API Names: FIELDNAME_FIELD
 	@wire(getRecord, {
 		recordId: '$recordId',
@@ -131,22 +146,13 @@ export default class NewLineItemUSA extends LightningElement {
 		this.showpage3 = this.last == 'gotopage3' ? true : false;
 		if (this.last === 'gotopage3') {
 			this.salePrice = this.calculatePrice(
-				this.selectedProduct,
+				this.selectedProductName,
 				this.thisQuote.data.fields.Price_Book__c.value,
 				this.productQty,
 				this.thisQuote.data.fields.Opportunity.value.fields.Default_Discount_for_Export__c.value,
 				this.selectedFamily
 			);
 			//CONSECUTIVE?????????????
-			console.log('Debug start');
-			console.log(this.selectedProduct);
-			console.log(this.thisQuote.data.fields.Price_Book__c.value);
-			console.log(this.productQty);
-			console.log(this.thisQuote.data.fields.Opportunity.value.fields.Default_Discount_for_Export__c.value);
-			console.log(this.selectedFamily);
-			console.log(this.salePrice);
-			console.log('Debug end');
-
 			this.productDiscount = this.calculateDiscount(this.salePrice);
 			this.totalPrice = (this.salePrice * this.productQty).toFixed(2);
 		}
@@ -164,8 +170,7 @@ export default class NewLineItemUSA extends LightningElement {
 		this.myProducts = [];
 		this.productList = [];
 		this.selectedFamily = '';
-		this.selectedProduct = '';
-		this.selectedPrdctPckSize = 1;
+		this.selectedProductName = '';
 		this.productQty = '';
 		this.productDescr = '';
 		this.salePrice = '';
@@ -177,7 +182,6 @@ export default class NewLineItemUSA extends LightningElement {
 	}
 	refreshTbl() {
 		//makes sure that datatable gets refreshed after LineItem insert happens
-		console.log('refreshing table');
 		return refreshApex(this.provisionedValue);
 	}
 	// PAGE SWITCHING END
@@ -189,8 +193,6 @@ export default class NewLineItemUSA extends LightningElement {
 		//add ERROR check current pricebook if PB not set,
 		//add ERROR if a price book was changed?
 		//TEMP
-		console.log(this.productData);
-
 		//~~INVESTIGATE USING getSObjectValue()
 
 		let matchingFamily = 0;
@@ -243,7 +245,7 @@ export default class NewLineItemUSA extends LightningElement {
 		this.renderNext1Btn = false;
 		this.myProducts = [];
 		this.selectedFamily = event.detail.value;
-		this.selectedProduct = '';
+		this.selectedProductName = '';
 		for (const prod of this.productList) {
 			if (prod.family === event.detail.value) {
 				for (const product of prod.products) {
@@ -254,20 +256,44 @@ export default class NewLineItemUSA extends LightningElement {
 	}
 	handleProductList(event) {
 		this.renderNext1Btn = true;
-		this.selectedProduct = event.detail.value;
-		if (this.selectedFamily.startsWith('Concrete Canvas')) {
-			for (const prod of this.productList) {
-				if (prod.family.startsWith('Concrete Canvas')) {
-					for (const product of prod.products) {
-						if (product.name === this.selectedProduct && product.packsize && product.packsize > 1) {
-							this.selectedPrdctPckSize = product.packsize;
-							this.showPackSizeBadge = true;
-						}
-					}
-				}
+		this.selectedProductName = event.detail.value;
+		this.assgnSelectedProdctDetails();
+		this.assignBadgeMsg();
+		// apply lower higher pack size
+	}
+
+	assgnSelectedProdctDetails() {
+		// get all prods with this family
+		let currProdFamList = this.productList.filter((x) => {
+			if (x.family == this.selectedFamily) {
+				return x.products;
 			}
+		});
+		let slctdProdInfo = [];
+		if (currProdFamList[0].products) {
+			slctdProdInfo = currProdFamList[0].products.filter((x) => {
+				if (x.name === this.selectedProductName) {
+					return x;
+				}
+			});
+		}
+		if (slctdProdInfo.length > 0) {
+			this.selectedProductDtls = slctdProdInfo[0];
+			console.log('this.selectedProductDtls: ', this.selectedProductDtls);
+		}
+		this.showPackSizeBadge = true;
+	}
+	assignBadgeMsg() {
+		if (this.selectedProductDtls) {
+			let packSz = this.selectedProductDtls.packsize;
+			this.badgemsg.pcksize = packSz;
+			this.badgemsg.up.qty = Math.ceil(this.productQty / packSz) * packSz;
+			this.badgemsg.up.packs = Math.ceil(this.productQty / packSz);
+			this.badgemsg.down.qty = Math.floor(this.productQty / packSz) * packSz;
+			this.badgemsg.down.packs = Math.floor(this.productQty / packSz);
 		}
 	}
+
 	get familyOptions() {
 		return this.productFamilies;
 	}
@@ -281,29 +307,23 @@ export default class NewLineItemUSA extends LightningElement {
 	// =========================================PAGE 2=======================================
 	changeQty(event) {
 		this.productQty = event.detail.value;
+		this.assignBadgeMsg();
+		//if changeqty is there,calculate floor and ceiling
 	}
 	changeDescr(event) {
 		this.productDescr = event.detail.value;
 	}
 
-	calculatePrice(selectedProduct, priceBook, quantity, exportDiscount, productFamily) {
-		console.log('selectedProduct: ', selectedProduct);
-		console.log('pricebooks: ', priceBook);
-		console.log('quantity: ', quantity);
-		console.log('exportDiscount: ', exportDiscount);
-		console.log('productFamily: ', productFamily);
-		console.log('productData: ', this.productData);
-
-		if (priceBook.includes('Export') || priceBook.includes('USA Distributor')) {
+	calculatePrice(selectedProductName, priceBook, quantity, exportDiscount, productFamily) {
+		if (priceBook.includes('Export')) {
 			for (const soqlProduct of this.productData) {
-				console.log('prod: ', soqlProduct);
-				if (soqlProduct.Product2.Name === selectedProduct && soqlProduct.Pricebook2.Name === priceBook) {
+				if (soqlProduct.Product2.Name === selectedProductName && soqlProduct.Pricebook2.Name === priceBook) {
 					//options: cc, cchydro, rest
 					if (productFamily == 'Concrete Canvas' || productFamily == 'Concrete Canvas USA') {
-						if (selectedProduct.includes('Hydro')) {
+						if (selectedProductName.includes('Hydro')) {
 							// apply 10% (CC Hydro)
 							return (soqlProduct.UnitPrice * 0.9).toFixed(2);
-						} else if (selectedProduct.substring(0, 3) === 'CCS') {
+						} else if (selectedProductName.substring(0, 3) === 'CCS') {
 							//Shelters do not get price floor discount
 							return soqlProduct.UnitPrice.toFixed(2);
 						} else {
@@ -327,26 +347,22 @@ export default class NewLineItemUSA extends LightningElement {
 		} else if (priceBook.includes('Standard') || priceBook.includes('USA Customer')) {
 			let newPrice = 0;
 			for (const soqlProduct of this.productData) {
-				console.log('IN Loop');
-				if (soqlProduct.Product2.Name === selectedProduct && soqlProduct.Pricebook2.Name === priceBook) {
-					console.log('cc no volume: ', soqlProduct);
+				if (soqlProduct.Product2.Name === selectedProductName && soqlProduct.Pricebook2.Name === priceBook) {
 					//  potential, but not if volume break price is found
 					newPrice = soqlProduct.UnitPrice.toFixed(2);
 				} else if (
-					soqlProduct.Product2.Name.includes(selectedProduct) &&
+					soqlProduct.Product2.Name.includes(selectedProductName) &&
 					soqlProduct.Pricebook2.Name === priceBook &&
 					Number(quantity) >= soqlProduct.Product2.ProductCode.split('~~')[1].split('~')[1] &&
 					Number(quantity) <= soqlProduct.Product2.ProductCode.split('~~')[1].split('~')[2]
 				) {
 					//	found volume based product - return this
-					console.log('cc volume: ', soqlProduct);
 					return soqlProduct.UnitPrice.toFixed(2);
 				}
 			}
 			return newPrice;
-		} else {
-			return 0;
 		}
+		return 0;
 	}
 
 	handlePriceOverride(e) {
@@ -357,7 +373,7 @@ export default class NewLineItemUSA extends LightningElement {
 	calculateDiscount(salePrice) {
 		for (const soqlProduct of this.productData) {
 			if (
-				soqlProduct.Product2.Name === this.selectedProduct &&
+				soqlProduct.Product2.Name === this.selectedProductName &&
 				soqlProduct.Pricebook2.Name === this.thisQuote.data.fields.Price_Book__c.value
 			) {
 				//(soqlProduct.Product2.UnitPrice / )
@@ -373,7 +389,7 @@ export default class NewLineItemUSA extends LightningElement {
 	insertLineItem() {
 		this.spinner = true;
 		const fields = {};
-		fields[PRICEBOOKENTRYID_FIELD.fieldApiName] = this.findPriceBookEntryId(this.selectedProduct);
+		fields[PRICEBOOKENTRYID_FIELD.fieldApiName] = this.findPriceBookEntryId(this.selectedProductName);
 		fields[QUOTEID_FIELD.fieldApiName] = this.recordId;
 		fields[QUANTITY_FIELD.fieldApiName] = this.productQty;
 		fields[UNITPRICE_FIELD.fieldApiName] = this.salePrice;
@@ -407,7 +423,6 @@ export default class NewLineItemUSA extends LightningElement {
 	findPriceBookEntryId(productName) {
 		for (const soqlProduct of this.productData) {
 			if (soqlProduct.Product2.Name === productName) {
-				console.log(soqlProduct.Id);
 				return soqlProduct.Id;
 			}
 		}
@@ -457,7 +472,6 @@ export default class NewLineItemUSA extends LightningElement {
 	// ======ENABLE SAVING INLINE TABLE EDITING OF LINE ITEM DESCRIPTION=====
 
 	handleRowAction(event) {
-		console.log('JSON:' + JSON.stringify(event.detail));
 		const action = event.detail.action;
 		const row = event.detail.row;
 		switch (action.name) {
@@ -503,7 +517,6 @@ export default class NewLineItemUSA extends LightningElement {
 	@wire(getProductFamily, { recordId: '$lineItemId' })
 	family({ error, data }) {
 		if (data) {
-			console.log('setting Edit Item Family: ' + data.Product2.Family);
 			this.selectedFamily = data.Product2.Family;
 		}
 		if (error) {
@@ -512,18 +525,14 @@ export default class NewLineItemUSA extends LightningElement {
 	}
 
 	editRowItem(productId, productName, productDescription, productQuantity) {
-		console.log('edit name: ' + productName);
-		console.log('edit desc: ' + productDescription);
-		console.log('edit quantity: ' + productQuantity);
 		//go to showpage2 screen,
 		this.showpage0 = false;
 		this.showpage2 = true;
 		this.editMode = true;
 		this.lineItemId = productId;
-		this.selectedProduct = productName;
+		this.selectedProductName = productName;
 		this.productQty = productQuantity;
 		this.productDescr = productDescription;
-		console.log('editing name: ', this.selectedProduct);
 	}
 	updateLineItem() {
 		this.spinner = true;
@@ -556,7 +565,13 @@ export default class NewLineItemUSA extends LightningElement {
 				);
 			});
 	}
-	//===========NOTE: UPSERT WHEN EDITING==========================
+
+	handleBadgeUpClick() {
+		if (this.badgemsg.up.qty > 0) this.productQty = this.badgemsg.up.qty;
+	}
+	handleBadgeDownClick() {
+		if (this.badgemsg.down.qty > 0) this.productQty = this.badgemsg.down.qty;
+	}
 	handleError(msg) {
 		this.dispatchEvent(
 			new ShowToastEvent({
