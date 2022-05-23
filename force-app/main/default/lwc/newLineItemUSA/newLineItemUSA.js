@@ -136,9 +136,7 @@ export default class NewLineItemUSA extends LightningElement {
 	//~~~~~~~~ OPTIMISE RETREIVING FIELDS WITH getFieldValue(record, field)
 	// instead of this.thisQuote.data.fields.Opportunity.value.fields.Default_Discount_for_Export__c.value,
 	// https://developer.salesforce.com/docs/component-library/documentation/en/lwc/lwc.reference_get_field_value
-	// To get the value of a record’s field, you can use the getRecord wire adapter,
-	// which returns the property record.data.fields.fieldName.value.
-	// However, you can also call getFieldValue(record, field) to get the value directly.
+	// OR getFieldValue(record, field) to get the value directly.
 	switchscreen(e) {
 		this.last = e.target.dataset.name;
 		this.showpage1 = this.last == 'gotopage1' ? true : false;
@@ -192,8 +190,6 @@ export default class NewLineItemUSA extends LightningElement {
 		this.showpage0 = false;
 		//add ERROR check current pricebook if PB not set,
 		//add ERROR if a price book was changed?
-		//TEMP
-		//~~INVESTIGATE USING getSObjectValue()
 
 		let matchingFamily = 0;
 		for (const soqlProduct of this.productData) {
@@ -316,11 +312,12 @@ export default class NewLineItemUSA extends LightningElement {
 
 	calculatePrice(selectedProductName, priceBook, quantity, exportDiscount, productFamily) {
 		if (priceBook.includes('Export')) {
+			// if (priceBook.includes('Export') || priceBook.includes('USA Distributor')) {
 			for (const soqlProduct of this.productData) {
 				if (soqlProduct.Product2.Name === selectedProductName && soqlProduct.Pricebook2.Name === priceBook) {
 					//options: cc, cchydro, rest
 					if (productFamily == 'Concrete Canvas' || productFamily == 'Concrete Canvas USA') {
-						if (selectedProductName.includes('Hydro')) {
+						if (selectedProductName.includes('Hydro') || selectedProductName.includes('CCHT')) {
 							// apply 10% (CC Hydro)
 							return (soqlProduct.UnitPrice * 0.9).toFixed(2);
 						} else if (selectedProductName.substring(0, 3) === 'CCS') {
